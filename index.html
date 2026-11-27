@@ -1,0 +1,213 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pammi Dairy</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial;background:#f1f5f3;color:#19352b}
+header{background:#123d30;color:white;padding:24px 18px}
+header h1{margin:0}
+header p{color:#c8dfd5;margin-bottom:0}
+main{padding:16px;max-width:850px;margin:auto}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.card,.panel{background:white;padding:18px;border-radius:14px;margin-bottom:14px;box-shadow:0 2px 8px #0000000c}
+.card small{color:#65776e}
+.card h2{margin:10px 0 0;color:#16734f}
+h3{margin-top:0}
+input,button{width:100%;padding:13px;margin:6px 0;border-radius:8px;font-size:15px}
+input{border:1px solid #ccd8d1}
+button{border:0;background:#16734f;color:white;font-weight:bold;cursor:pointer}
+button.delete{background:#b83c3c;width:auto;padding:7px 12px}
+button.secondary{background:#45685a}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td,th{text-align:left;padding:10px 5px;border-bottom:1px solid #eee}
+.list{overflow-x:auto}
+</style>
+</head>
+<body>
+
+<header>
+<h1>🥛 Pammi Dairy</h1>
+<p>Owner Dairy Management System</p>
+</header>
+
+<main>
+<div class="cards">
+<div class="card">
+<small>Total Customers</small>
+<h2 id="customers">0</h2>
+</div>
+<div class="card">
+<small>Today's Milk</small>
+<h2 id="milk">0 L</h2>
+</div>
+<div class="card">
+<small>Total Income</small>
+<h2 id="income">₹0</h2>
+</div>
+<div class="card">
+<small>Pending Payments</small>
+<h2 id="pending">₹0</h2>
+</div>
+</div>
+
+<div class="panel">
+<h3>➕ Add Customer</h3>
+<input id="name" placeholder="Customer Name">
+<input id="phone" placeholder="Phone Number" type="tel">
+<button onclick="addCustomer()">Add Customer</button>
+</div>
+
+<div class="panel">
+<h3>🥛 Milk Entry</h3>
+<select id="customerSelect" style="width:100%;padding:12px;border-radius:8px;border:1px solid #ccd8d1">
+<option value="">Select Customer</option>
+</select>
+<input id="quantity" type="number" step="0.1" placeholder="Milk Quantity (Litres)">
+<input id="rate" type="number" step="0.01" placeholder="Rate per Litre">
+<button onclick="addMilk()">Save Milk Entry</button>
+</div>
+
+<div class="panel">
+<h3>💰 Record Payment</h3>
+<select id="paymentCustomer" style="width:100%;padding:12px;border-radius:8px;border:1px solid #ccd8d1">
+<option value="">Select Customer</option>
+</select>
+<input id="amount" type="number" placeholder="Payment Amount (₹)">
+<button onclick="addPayment()">Save Payment</button>
+</div>
+
+<div class="panel">
+<h3>📋 Milk Records</h3>
+<div class="list">
+<table>
+<thead><tr><th>Date</th><th>Customer</th><th>Litres</th><th>Amount</th></tr></thead>
+<tbody id="milkRecords"></tbody>
+</table>
+</div>
+</div>
+
+<div class="panel">
+<h3>👥 Customer Records</h3>
+<div class="list">
+<table>
+<thead><tr><th>Name</th><th>Phone</th><th>Balance</th><th>Action</th></tr></thead>
+<tbody id="customerRecords"></tbody>
+</table>
+</div>
+</div>
+
+<button class="secondary" onclick="downloadData()">Download Records (CSV)</button>
+</main>
+
+<script>
+let customers=JSON.parse(localStorage.getItem("pd_customers")||"[]");
+let entries=JSON.parse(localStorage.getItem("pd_entries")||"[]");
+let payments=JSON.parse(localStorage.getItem("pd_payments")||"[]");
+
+function save(){
+localStorage.setItem("pd_customers",JSON.stringify(customers));
+localStorage.setItem("pd_entries",JSON.stringify(entries));
+localStorage.setItem("pd_payments",JSON.stringify(payments));
+render();
+}
+
+function addCustomer(){
+let name=document.getElementById("name").value.trim();
+let phone=document.getElementById("phone").value.trim();
+if(!name){alert("Enter customer name");return;}
+customers.push({id:Date.now(),name,phone});
+document.getElementById("name").value="";
+document.getElementById("phone").value="";
+save();
+}
+
+function addMilk(){
+let id=Number(document.getElementById("customerSelect").value);
+let qty=Number(document.getElementById("quantity").value);
+let rate=Number(document.getElementById("rate").value);
+let customer=customers.find(c=>c.id===id);
+if(!customer||qty<=0||rate<=0){alert("Enter valid milk details");return;}
+entries.push({id:Date.now(),customerId:id,name:customer.name,qty,rate,total:qty*rate,date:new Date().toLocaleDateString()});
+document.getElementById("quantity").value="";
+save();
+}
+
+function addPayment(){
+let id=Number(document.getElementById("paymentCustomer").value);
+let amount=Number(document.getElementById("amount").value);
+if(!customers.some(c=>c.id===id)||amount<=0){alert("Enter valid payment");return;}
+payments.push({id:Date.now(),customerId:id,amount,date:new Date().toLocaleDateString()});
+document.getElementById("amount").value="";
+save();
+}
+
+function balance(id){
+let due=entries.filter(e=>e.customerId===id).reduce((s,e)=>s+e.total,0);
+let paid=payments.filter(p=>p.customerId===id).reduce((s,p)=>s+p.amount,0);
+return due-paid;
+}
+
+function removeCustomer(id){
+if(!confirm("Delete this customer and all their records?"))return;
+customers=customers.filter(c=>c.id!==id);
+entries=entries.filter(e=>e.customerId!==id);
+payments=payments.filter(p=>p.customerId!==id);
+save();
+}
+
+function render(){
+let today=new Date().toLocaleDateString();
+document.getElementById("customers").textContent=customers.length;
+document.getElementById("milk").textContent=
+entries.filter(e=>e.date===today).reduce((s,e)=>s+e.qty,0)+" L";
+document.getElementById("income").textContent="₹"+
+payments.reduce((s,p)=>s+p.amount,0).toFixed(2);
+document.getElementById("pending").textContent="₹"+
+customers.reduce((s,c)=>s+Math.max(0,balance(c.id)),0).toFixed(2);
+
+["customerSelect","paymentCustomer"].forEach(id=>{
+let select=document.getElementById(id);
+let previous=select.value;
+select.innerHTML='<option value="">Select Customer</option>';
+customers.forEach(c=>{
+let o=document.createElement("option");
+o.value=c.id;o.textContent=c.name;select.appendChild(o);
+});
+select.value=previous;
+});
+
+document.getElementById("customerRecords").innerHTML=customers.map(c=>
+`<tr><td>${safe(c.name)}</td><td>${safe(c.phone)}</td><td>₹${balance(c.id).toFixed(2)}</td><td><button class="delete" onclick="removeCustomer(${c.id})">Delete</button></td></tr>`
+).join("");
+
+document.getElementById("milkRecords").innerHTML=entries.slice().reverse().map(e=>
+`<tr><td>${safe(e.date)}</td><td>${safe(e.name)}</td><td>${e.qty} L</td><td>₹${e.total.toFixed(2)}</td></tr>`
+).join("");
+}
+
+function safe(s){
+return String(s).replace(/[&<>"']/g,c=>({
+"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+}[c]));
+}
+
+function downloadData(){
+let rows=[["Date","Customer","Litres","Rate","Amount"]];
+entries.forEach(e=>rows.push([e.date,e.name,e.qty,e.rate,e.total]));
+let csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(",")).join("\n");
+let blob=new Blob([csv],{type:"text/csv"});
+let a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="pammi-dairy-records.csv";
+a.click();
+URL.revokeObjectURL(a.href);
+}
+
+render();
+</script>
+</body>
+</html>
