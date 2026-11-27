@@ -132,7 +132,7 @@ let today=new Date().toLocaleDateString();
 document.getElementById("milk").textContent=milk.filter(x=>x.date===today).reduce((s,x)=>s+x.q,0)+" L";
 income.textContent="₹"+paid.reduce((s,x)=>s+x.a,0);
 pending.textContent="₹"+people.reduce((s,x)=>s+Math.max(0,balance(x.id)),0);
-["customer","payer"].forEach(id=>{
+["customer","payer","billCustomer"].forEach(id=>{
 let el=document.getElementById(id),old=el.value;
 el.innerHTML='<option value="">Select Customer</option>';
 people.forEach(c=>el.add(new Option(c.n,c.id)));
