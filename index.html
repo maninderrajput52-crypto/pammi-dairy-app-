@@ -27,6 +27,15 @@ td,th{text-align:left;padding:10px;border-bottom:1px solid #eee}
 <body>
 <header>
 <h1>🥛 Pammi Dairy</h1>
+  <div class="panel">
+  <h3>📅 Monthly Customer Bill</h3>
+  <select id="billCustomer">
+    <option value="">Select Customer</option>
+  </select>
+  <input type="month" id="billMonth">
+  <button onclick="monthlyBill()">Generate Bill</button>
+  <div id="billResult"></div>
+  </div>
 <p>Professional Owner Dashboard</p>
 </header>
 <main>
